@@ -13,6 +13,13 @@ using std::endl;
 using std::cin;
 using std::ofstream;
 using std::vector;
+using std::invalid_argument;
+using std::getline;
+using std::to_string;
+using std::setw;
+using std::setprecision;
+using std::fixed;
+using std::left;
 
 struct studentas {
     string Vardas;
@@ -29,8 +36,7 @@ int random() {
     return randomNumber;
 }
 
-int nuskaityti_pazymi(string skaicius_string) {
-
+int patikrink_egzamino_pazymi(string skaicius_string) {
     while (true) {
         try {
             int ivestas_skaicius = stoi(skaicius_string);
@@ -38,11 +44,10 @@ int nuskaityti_pazymi(string skaicius_string) {
                 return ivestas_skaicius;
             } else {
                 cout << "Klaida! Skaicius nera tarp 1 ir 10. Pabandykite dar karta!" << endl;
-                cin >> skaicius_string;
                 continue;
             }
         }
-        catch (std::invalid_argument &e) {
+        catch (invalid_argument &e) {
             cout << "Klaida! Jus ivedete ne skaiciu. Pabandykite dar karta!" << endl;
             cin >> skaicius_string;
             continue;
@@ -50,45 +55,45 @@ int nuskaityti_pazymi(string skaicius_string) {
     }
 }
 
-bool konvertuot(int pazymiu_masyvas[], const string &token, int kiek) {
+bool konvertuok_pazymius(int *pazymiu_masyvas, const string &token, int kiek) {
     bool tesk = false;
     try {
         int skaicius = stoi(token);
         if (skaicius <= 0 | skaicius > 10) {
+            cout << "Klaida pazymys  turi buti nuo 0 iki 10" << endl;
             tesk = true;
         }
         pazymiu_masyvas[kiek] = skaicius;
-    } catch (std::invalid_argument &e) {
-        cout << "Klaida" << endl;
+    } catch (invalid_argument &e) {
+        cout << "Klaida. Jus ivedete ne skaiciu. Pabandykite dar karta!" << endl;
         tesk = true;
     }
     return tesk;
 }
 
-int *eilutes_nuskaitymas(int pazymiu_masyvas[]) {
+int *pazymiu_nuskaitymas(int *pazymiu_masyvas) {
     string delimiter = " ";
     size_t pos = 0;
     string token;
     string pazymiai;
-
     while (true) {
         int kiek = 0;
         bool tesk = true;
         cout << "Iveskite studento namu darbu rezultatus:" << endl;
-        std::getline(std::cin >> std::ws, pazymiai);
-
-        while ((pos = pazymiai.find(delimiter)) != std::string::npos) {
+        getline(cin >> std::ws, pazymiai);
+        while ((pos = pazymiai.find(delimiter)) != string::npos) {
             token = pazymiai.substr(0, pos);
-            tesk = konvertuot(pazymiu_masyvas, token, kiek);
+            tesk = konvertuok_pazymius(pazymiu_masyvas, token, kiek);
             if (tesk) {
                 break;
             }
             pazymiai.erase(0, pos + delimiter.length());
             kiek++;
         }
-
-        if (!tesk & !konvertuot(pazymiu_masyvas, pazymiai, kiek)) {
-            return pazymiu_masyvas;
+        if (!tesk) {
+            if (!konvertuok_pazymius(pazymiu_masyvas, pazymiai, kiek)) {
+                return pazymiu_masyvas;
+            }
         }
     }
 }
@@ -108,7 +113,7 @@ float galutinisRezultata(int *pazymiu_masyvas, string skaicius_string) {
         suma = suma + pazymiu_masyvas[i];
     }
     float vidurkis = suma / nd_skaicius;
-    int egzaminas = nuskaityti_pazymi(skaicius_string);
+    int egzaminas = patikrink_egzamino_pazymi(skaicius_string);
     float galutinis_pazymys;
     galutinis_pazymys = vidurkis * (float) 0.4 +
                         egzaminas * (float) 0.6;
@@ -117,7 +122,6 @@ float galutinisRezultata(int *pazymiu_masyvas, string skaicius_string) {
 
 float median(int *pazymiu_masyvas) {
     int nd_skaicius = masyvo_ilgis(pazymiu_masyvas);
-
     std::sort(pazymiu_masyvas + 0, pazymiu_masyvas + nd_skaicius);
     double median;
     if (nd_skaicius % 2 == 0) {
@@ -130,7 +134,7 @@ float median(int *pazymiu_masyvas) {
     }
 }
 
-string klausimai() {
+string generavimo_klausimas() {
     string klausimas;
     cout << "Ar norite, kad pazymiai ir egzamino rezultatas butu sugeneruotas atsitiktinai?" << endl
          << "(Iveskite taip arba ne)";
@@ -139,114 +143,101 @@ string klausimai() {
 }
 
 int sugeneruotu_pazymiu_kiekis() {
-    int kiek = 0;
+    string kiek;
     cout << "Kiek pazymiu sugeneruoti?";
-    cin >> kiek;
-    return kiek;
+    while (true) {
+        cin >> kiek;
+        try {
+            if (!kiek.find_first_not_of(" 0123456789")) {
+                cout << "Klaida. Ivedete ne skaicius" << endl;
+                continue;
+            } else {
+                return stoi(kiek);
+            }
+        } catch (std::invalid_argument &e) {
+            cout << "Klaida. Ivedete ne skaicius. Pabandykite dar karta!" << endl;
+        }
+    }
 }
 
-int generuojamas_kiekis(int *pazymiu_masyvas) {
+int generuojami_skaiciai(int *pazymiu_masyvas) {
     while (true) {
-        try {
-            int kiek = sugeneruotu_pazymiu_kiekis();
-            if (kiek > 0) {
-                srand(time(NULL));
-                for (int i = 0; i < kiek; i++) {
-                    pazymiu_masyvas[i] = random();
-                    cout << pazymiu_masyvas[i] << endl;
-                }
-                srand(time(NULL));
-                return false;
-            } else {
-                cout << "Skaicius turi buti didesnis uz 0" << endl;
+        int kiek = sugeneruotu_pazymiu_kiekis();
+        if (kiek > 0 & kiek < 100) {
+            srand(time(NULL));
+            for (int i = 0; i < kiek; i++) {
+                pazymiu_masyvas[i] = random();
             }
+            srand(time(NULL));
+            return false;
+        } else {
+            cout << "Skaicius turi buti didesnis uz 0 ir mazesnis nei 100" << endl;
         }
-        catch (std::invalid_argument &e) {
-            cout << "Pabandykite dar karta!" << endl;
-            sugeneruotu_pazymiu_kiekis();
+    }
+}
+
+int studento_ivedimo_klausimas() {
+    string atsakymas;
+    cout << "Ar ivesti nauja studenta?Iveskite taip arba ne" << endl;
+    while (true) {
+        cin >> atsakymas;
+        if (atsakymas == "Taip" || atsakymas == "taip" || atsakymas == "TAIP")
+            return 1;
+        else if (atsakymas == "ne" || atsakymas == "Ne" || atsakymas == "NE")
+            return 0;
+        else {
+            cout << "Klaida. Iveskite taip arba ne." << endl;
             continue;
         }
     }
 }
 
-int pradinis_klausimas() {
-    string atsakymas;
-    cout << "Ar ivesti nauja studenta?Iveskite taip arba ne" << endl;
-    while (true) {
-        cin >> atsakymas;
-        try {
-            if (atsakymas == "Taip" || atsakymas == "taip" || atsakymas == "TAIP")
-                return 1;
-            else if (atsakymas == "ne" || atsakymas == "Ne" || atsakymas == "NE")
-                return 0;
-            else {
-                bool ar = false;
-                cout << "Pabandykite dar karta!" << endl;
+int studento_duomenys(studentas *students, int *pazymiu_masyvas, string &skaicius_string, int i) {
+    while (studento_ivedimo_klausimas() == 1) {
+        cout << "Iveskite studento varda, pavarde: " << endl;
+        cin >> students[i].Vardas >> students[i].Pavarde;
+        while (true) {
+            string klausimas = generavimo_klausimas();
+            if (klausimas == "ne" || klausimas == "Ne" || klausimas == "NE") {
+                string egzaminas;
+                pazymiu_nuskaitymas(pazymiu_masyvas);
+                cout << "Iveskite egzamino rezultata: " << endl;
+                cin >> skaicius_string;
+                students[i].galutinis_rezultatas = galutinisRezultata(pazymiu_masyvas, skaicius_string);
+                students[i].mediana = median(pazymiu_masyvas);
+                i++;
+                break;
+            } else if (klausimas == "taip" || klausimas == "Taip" || klausimas == "TAIP") {
+                generuojami_skaiciai(pazymiu_masyvas);
+                students[i].egzamino_rezultatas = random();
+                students[i].galutinis_rezultatas = galutinisRezultata(pazymiu_masyvas,
+                                                                      to_string(students[i].egzamino_rezultatas));
+                students[i].mediana = median(pazymiu_masyvas);
+                i++;
+                break;
+            } else {
+                cout << "Klaida. ";
                 continue;
             }
         }
-        catch (std::invalid_argument &e) {
-            cout << "Pabandykite dar karta!" << endl;
-            cin >> atsakymas;
-        }
-    }
-}
-
-void grazina(const studentas *students, int i) {
-    cout.width(20);
-    cout << std::left <<  "Vardas" << std::setw(20) << "Pavarde" << std::setw(20) << "Galutinis vidurkis"
-           << std::setw(20) << "Galutine mediana" << endl;
-    cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
-    ofstream myfile;
-    myfile.open("example.txt");
-    myfile.width(20);
-    myfile << std::left <<  "Vardas" << std::setw(20) << "Pavarde" << std::setw(20) << "Galutinis vidurkis"
-           << std::setw(20) << "Galutine mediana" << endl;
-    myfile << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
-    for (int j = 0; j < i; j++) {
-        cout.width(20);
-        cout << students[j].Vardas << std::setw(20) << students[j].Pavarde
-             << std::setw(20) << std::setprecision(2) << std::fixed
-             << std::left << std::setw(20) << students[j].galutinis_rezultatas << std::setw(20)
-             << std::setprecision(2) << std::fixed
-             << students[j].mediana
-             << endl;
-        myfile.width(20);
-        myfile << students[j].Vardas << std::setw(20) << students[j].Pavarde
-               << std::setw(20) << std::setprecision(2) << std::fixed
-               << std::left << std::setw(20) << students[j].galutinis_rezultatas << std::setw(20)
-               << std::setprecision(2) << std::fixed
-               << students[j].mediana
-               << endl;
-    }
-    myfile.close();
-}
-
-int studento_duomenys(studentas *students, int *pazymiu_masyvas, string &skaicius_string, int i) {
-    while (pradinis_klausimas() == 1) {
-        cout << "Iveskite studento varda, pavarde: " << endl;
-        cin >> students[i].Vardas >> students[i].Pavarde;
-        string klausimas = klausimai();
-        if (klausimas == "ne" || klausimas == "Ne" || klausimas == "NE") {
-            string egzaminas;
-            eilutes_nuskaitymas(pazymiu_masyvas);
-            cout << "Iveskite egzamino rezultata: " << endl;
-            cin >> skaicius_string;
-            students[i].galutinis_rezultatas = galutinisRezultata(pazymiu_masyvas, skaicius_string);
-            students[i].mediana = median(pazymiu_masyvas);
-            i++;
-        } else if (klausimas == "taip" || klausimas == "Taip" || klausimas == "TAIP") {
-            generuojamas_kiekis(pazymiu_masyvas);
-            students[i].egzamino_rezultatas = random();
-            students[i].galutinis_rezultatas = galutinisRezultata(pazymiu_masyvas,
-                                                                  std::to_string(students[i].egzamino_rezultatas));
-            students[i].mediana = median(pazymiu_masyvas);
-            i++;
-        } else {
-            cout << "Klaida. Ivaskite taip arba ne" << endl;
-        }
     }
     return i;
+}
+
+void informacijos_isvedimas(const studentas *students, int i) {
+    cout.width(20);
+    cout << std::left << "Vardas" << setw(20) << "Pavarde" << setw(20) << "Galutinis vidurkis"
+         << setw(20) << "Galutine mediana" << endl;
+    cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
+    for (int j = 0; j < i; j++) {
+        cout.width(20);
+        cout << students[j].Vardas << setw(20) << students[j].Pavarde
+             << setw(20) << setprecision(2) << fixed
+             << left << setw(20) << students[j].galutinis_rezultatas << setw(20)
+             << setprecision(2) << fixed
+             << students[j].mediana
+             << endl;
+    }
 }
 
 int main() {
@@ -256,17 +247,5 @@ int main() {
     string skaicius_string;
     int i = 0;
     i = studento_duomenys(students, pazymiu_masyvas, skaicius_string, i);
-    grazina(students, i);
+    informacijos_isvedimas(students, i);
 }
-
-
-
-
-
-
-
-
-
-
-
-
